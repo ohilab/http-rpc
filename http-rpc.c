@@ -41,6 +41,8 @@ static HttpRpc_Delay HttpRpc_delay;
 
 static uint8_t HttpRpc_socketNumber = 0;
 
+static char HttpRpc_buffer[256];
+
 typedef struct _HttpRpc_Client
 {
     uint8_t rxBuffer[HTTPRPC_BUFFER_DIMENSION+1];
@@ -206,9 +208,11 @@ static HttpRpc_Error HttpRpc_parseHeader (char* buffer, uint16_t length, uint8_t
     return HTTPRPC_ERROR_OK;
 }
 
-static void HttpRpc_sendResponse()
+static void HttpRpc_sendError (Http_ResponseCode code, uint8_t client)
 {
-
+    uint16_t wrote = 0;
+    sprintf(HttpRpc_buffer, "HTTP/1.1 %d Error\r\nContent-Length: 0\r\nServer: OHILab\r\n\n\r", code);
+    EthernetServerSocket_writeBytes(HttpRpc_socketNumber,client,HttpRpc_buffer,strlen(HttpRpc_buffer),&wrote);
 }
 
 void HttpRpc_poll (void)
@@ -219,8 +223,6 @@ void HttpRpc_poll (void)
 
 	HttpRpc_Error error = HTTPRPC_ERROR_OK;
 
-    static char buffer[256];
-
     for (uint8_t i = 0; i < ETHERNET_MAX_LISTEN_CLIENT; ++i)
     {
         // When a client is not connected, jump to the next
@@ -230,13 +232,13 @@ void HttpRpc_poll (void)
         // Clear index
         received = 0;
         // Get first line
-        error = HttpRpc_getLine(buffer,255,3000,i,&received);
+        error = HttpRpc_getLine(HttpRpc_buffer,255,3000,i,&received);
         // When there isn't message, jump to the next
         if (received < 0)
             continue;
 
         // Parse the header
-        error = HttpRpc_parseHeader(buffer,strlen(buffer),i);
+        error = HttpRpc_parseHeader(HttpRpc_buffer,strlen(HttpRpc_buffer),i);
         if (error != HTTPRPC_ERROR_OK)
         {
 #ifdef OHILAB_HTTPRPC_DEBUG
@@ -253,7 +255,7 @@ void HttpRpc_poll (void)
         // The request header was received
         do
         {
-            HttpRpc_getLine(buffer,255,3000,i,&received);
+            HttpRpc_getLine(HttpRpc_buffer,255,3000,i,&received);
             //  If we received an empty line, this would indicate the end of the message
             if (received < 0)
             {
@@ -261,11 +263,13 @@ void HttpRpc_poll (void)
 #ifdef OHILAB_HTTPRPC_DEBUG
                 Cli_sendMessage("HTTP-RPC","Request message was received",CLI_MESSAGETYPE_INFO);
 #endif
+                // Just for test
+                HttpRpc_sendError(404,i);
                 break;
             }
             // Otherwise parse the message params
 #ifdef OHILAB_HTTPRPC_DEBUG
-            Cli_sendMessage("HTTP-RPC",buffer,CLI_MESSAGETYPE_INFO);
+            Cli_sendMessage("HTTP-RPC",HttpRpc_buffer,CLI_MESSAGETYPE_INFO);
 #endif
 
         } while (received > 0);

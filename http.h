@@ -67,10 +67,19 @@ typedef struct _Http_Message
 
     char uri[HTTP_MAX_URI_LENGTH];   /**< The uri associated with the request */
 
-
 } Http_Message;
 
-
+/**
+ * @see https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
+ */
+typedef enum
+{
+    HTTPRESPONSECODE_OK = 200,                            /**< Successful: OK */
+    HTTPRESPONSECODE_BADREQUEST = 400,         /**< Client Error: Bad Request */
+    HTTPRESPONSECODE_UNAUTHORIZED = 401,      /**< Client Error: Unauthorized */
+    HTTPRESPONSECODE_FORBIDDEN = 403,            /**< Client Error: Forbidden */
+    HTTPRESPONSECODE_NOTFOUND = 404,             /**< Client Error: Not found */
+} Http_ResponseCode;
 
 
 #endif // __OHILAB_HTTP_H
