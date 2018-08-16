@@ -61,12 +61,22 @@
 #include "ethernet-socket/ethernet-socket.h"
 #include "ethernet-socket/ethernet-serversocket.h"
 
-/*
- * The user must define these label... TODO
- */
 #ifndef __NO_BOARD_H
 #include "board.h"
 #endif
+
+#ifndef HTTPRRC_TIMEOUT
+#define HTTPRPC_TIMEOUT                 3000
+#endif
+
+//#define HTTP_RPC_MAX_URI_LENGTH         200
+//#define HTTP_RPC_BUFFER_DIMENSION		  0x3FF
+
+#ifndef HTTPRPC_RULES_MAX_NUMBER
+#define HTTPRPC_RULES_MAX_NUMBER        5
+#endif
+
+#include "http-server/http-server.h"
 
 typedef enum
 {
@@ -80,23 +90,47 @@ typedef enum
     HTTPRPC_ERROR_WRONG_REQUEST_FORMAT,
 } HttpRpc_Error;
 
-/**
- *
- * @param port The port number to open the socket server
- * @param number The socket number, 0 is default
- * @param config The configurations needed by socket
- * @return HTTPRPC_ERROR_OK if the socket was open and everything is ok, error otherwise
- */
-HttpRpc_Error HttpRpc_open (uint16_t port, uint8_t number, EthernetSocket_Config* config);
+typedef struct _HttpRpc_Rule
+{
+    char rule[10];
+    void (*applicationCallback)(uint8_t value);
+} HttpRpc_Rule, *HttpRpc_RuleHandle;
 
-/**
- *
- */
-HttpRpc_Error HttpRpc_addRule (const char* rule, void (*callback)(void));
+typedef struct _HttpRpc_Device
+{
+	HttpServer_Device httpServer;
 
-/**
- *
- */
-void HttpRpc_poll (void);
+	struct HttpRpc_Config
+    {
+        uint16_t port;
+	    uint8_t socketNumber;
+	    EthernetSocket_Config* ethernetSocketConfig;
+    }config;
+
+    HttpRpc_RuleHandle rules;
+
+
+} HttpRpc_Device, *HttpRpc_DeviceHandle;
+
+HttpRpc_Error HttpRpc_init (HttpRpc_DeviceHandle httpRpc);
+
+HttpRpc_Error HttpRpc_poll(HttpRpc_DeviceHandle httpServer, uint16_t timeout);
+
+HttpServer_Error HttpRpc_performingRequest(void* dev,
+                                           HttpServer_MessageHandle message);
+
+HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
+                                 HttpServer_MessageHandle message);
+
+//HttpRpc_Error HttpRpc_postHandler(HttpServer_MessageHandle message);
+//HttpRpc_Error HttpRpc_headHandler(HttpServer_MessageHandle message);
+//HttpRpc_Error HttpRpc_putHandler(HttpServer_MessageHandle message);
+//HttpRpc_Error HttpRpc_deleteHandler(HttpServer_MessageHandle message);
+//HttpRpc_Error HttpRpc_traceHandler(HttpServer_MessageHandle message);
+//HttpRpc_Error HttpRpc_optionsHandler(HttpServer_MessageHandle message);
+//HttpRpc_Error HttpRpc_connectHandler(HttpServer_MessageHandle message);
+
+HttpRpc_Error HttpRpc_addRule(void);
+
 
 #endif // __OHILAB_HTTP_RPC_H
