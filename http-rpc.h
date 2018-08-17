@@ -3,6 +3,7 @@
  * Copyright (C) 2018 A. C. Open Hardware Ideas Lab
  *
  * Authors:
+ *  Gianluca Calignano <g.calignano97@gmail.com>
  *  Marco Giammarini <m.giammarini@warcomeb.it>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -42,7 +43,7 @@
  * library to manage client/server socket
  *
  * @section thanksto Thanks to...
- *
+ * @li Gianluca Calignano
  * @li Marco Giammarini
  *
  */
@@ -56,14 +57,15 @@
 #define OHILAB_HTTP_RPC_LIBRARY_VERSION_bug 0
 #define OHILAB_HTTP_RPC_LIBRARY_TIME        0
 
-#include "libohiboard.h"
-
-#include "ethernet-socket/ethernet-socket.h"
-#include "ethernet-socket/ethernet-serversocket.h"
-
 #ifndef __NO_BOARD_H
 #include "board.h"
 #endif
+
+// Ethernet server socket
+#include "ethernet-socket/ethernet-serversocket.h"
+
+// HTTP Server
+#include "http-server/http-server.h"
 
 #ifndef HTTPRRC_TIMEOUT
 #define HTTPRPC_TIMEOUT                 3000
@@ -75,8 +77,24 @@
 #ifndef HTTPRPC_RULES_MAX_NUMBER
 #define HTTPRPC_RULES_MAX_NUMBER        5
 #endif
-
-#include "http-server/http-server.h"
+#ifndef HTTPRPC_MAX_RULE_CLASS_LENGTH
+#define HTTPRPC_MAX_RULE_CLASS_LENGTH         32
+#endif
+#ifndef HTTPRPC_MAX_RULE_FUNCTION_LENGTH
+#define HTTPRPC_MAX_RULE_FUNCTION_LENGTH    32
+#endif
+#ifndef HTTPRPC_MAX_ARGUMENT_NUMBER
+#define HTTPRPC_MAX_ARGUMENT_NUMBER     2
+#endif
+#ifndef HTTPRPC_MAX_ARGUMENTS_LENGTH
+#define HTTPRPC_MAX_ARGUMENTS_LENGTH   255
+#endif
+#ifndef HTTPRPC_MAX_RULE_CLASS_LENGTH
+#define HTTPRPC_MAX_RULE_CLASS_LENGTH   255
+#endif
+#ifndef HTTPRPC_MAX_RULE_FUNCTION_LENGTH
+#define HTTPRPC_MAX_RULE_FUNCTION_LENGTH   255
+#endif
 
 typedef enum
 {
@@ -88,12 +106,15 @@ typedef enum
 	HTTPRPC_ERROR_WRONG_PARAM,
 	HTTPRPC_ERROR_TIMEOUT,
     HTTPRPC_ERROR_WRONG_REQUEST_FORMAT,
+    HTTPRPC_ERROR_RPC_COMMAND_NOT_RECOGNIZE,
+    HTTPRPC_ERROR_RPC_COMMAND_TOO_LONG,
 } HttpRpc_Error;
 
 typedef struct _HttpRpc_Rule
 {
-    char rule[10];
-    void (*applicationCallback)(uint8_t value);
+    char ruleClass[HTTPRPC_MAX_RULE_CLASS_LENGTH+1];
+    char ruleFunction[HTTPRPC_MAX_RULE_FUNCTION_LENGTH+1];
+    void (*applicationCallback)(char* argument);
 } HttpRpc_Rule, *HttpRpc_RuleHandle;
 
 typedef struct _HttpRpc_Device
@@ -107,30 +128,27 @@ typedef struct _HttpRpc_Device
 	    EthernetSocket_Config* ethernetSocketConfig;
     }config;
 
-    HttpRpc_RuleHandle rules;
-
+    HttpRpc_Rule rules[HTTPRPC_RULES_MAX_NUMBER];
+    char rpcCommandArguments[HTTPRPC_MAX_ARGUMENTS_LENGTH+1];
 
 } HttpRpc_Device, *HttpRpc_DeviceHandle;
 
 HttpRpc_Error HttpRpc_init (HttpRpc_DeviceHandle httpRpc);
 
-HttpRpc_Error HttpRpc_poll(HttpRpc_DeviceHandle httpServer, uint16_t timeout);
+HttpRpc_Error HttpRpc_poll (HttpRpc_DeviceHandle httpServer, uint16_t timeout);
 
-HttpServer_Error HttpRpc_performingRequest(void* dev,
-                                           HttpServer_MessageHandle message);
+HttpServer_Error HttpRpc_performingRequest (void* dev,
+                                            HttpServer_MessageHandle message);
 
-HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
-                                 HttpServer_MessageHandle message);
+HttpRpc_Error HttpRpc_getHandler (HttpRpc_DeviceHandle dev,
+                                  HttpServer_MessageHandle message);
 
-//HttpRpc_Error HttpRpc_postHandler(HttpServer_MessageHandle message);
-//HttpRpc_Error HttpRpc_headHandler(HttpServer_MessageHandle message);
-//HttpRpc_Error HttpRpc_putHandler(HttpServer_MessageHandle message);
-//HttpRpc_Error HttpRpc_deleteHandler(HttpServer_MessageHandle message);
-//HttpRpc_Error HttpRpc_traceHandler(HttpServer_MessageHandle message);
-//HttpRpc_Error HttpRpc_optionsHandler(HttpServer_MessageHandle message);
-//HttpRpc_Error HttpRpc_connectHandler(HttpServer_MessageHandle message);
 
-HttpRpc_Error HttpRpc_addRule(void);
+HttpRpc_Error HttpRpc_addRule(HttpRpc_DeviceHandle dev,
+                              uint8_t ruleNumber,
+                              char* class,
+                              char* function,
+                              void (ruleCallback)(char* argument));
 
 
 #endif // __OHILAB_HTTP_RPC_H
