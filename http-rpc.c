@@ -96,9 +96,14 @@ HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
                                            tokenCharacter);
                             if(strcmp (token,
                                        dev->rules[i].ruleClass) == 0)
-                               continue;
+                            {
+                                continue;
+                            }
                             else
+                            {
+                                message->responseCode = HTTPSERVER_RESPONSECODE_BADREQUEST;
                                 return HTTPRPC_ERROR_RPC_COMMAND_NOT_RECOGNIZE;
+                            }
                         }
                         /*
                          *check if a ruleFunction match
@@ -112,8 +117,14 @@ HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
                             tokenCharacter[2] = '0';
                             token = strtok(NULL, tokenCharacter);
                             if(strcmp (token, dev->rules[i].ruleFunction) == 0)
+                            {
                                 continue;
-                            else return HTTPRPC_ERROR_RPC_COMMAND_NOT_RECOGNIZE;
+                            }
+                            else
+                            {
+                                message->responseCode = HTTPSERVER_RESPONSECODE_BADREQUEST;
+                                return HTTPRPC_ERROR_RPC_COMMAND_NOT_RECOGNIZE;
+                            }
                         }
                     }
 
@@ -121,7 +132,7 @@ HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
                         argumentLength = strlen(token);
                         if((argumentLength + rpcCommandArgumentsIndex) < HTTPRPC_MAX_ARGUMENTS_LENGTH)
                         {
-                            if(token==NULL) return HTTPRPC_ERROR_OK;
+                            if(token==NULL) break;
                             strncpy(&(dev->rpcCommandArguments[rpcCommandArgumentsIndex]),
                                     token,
                                     argumentLength);
@@ -132,14 +143,16 @@ HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
 
                         else
                         {
+                            message->responseCode = HTTPSERVER_RESPONSECODE_REQUESTENTITYTOOLARGE;
                             return HTTPRPC_ERROR_RPC_COMMAND_TOO_LONG;
+
                         }
 
                     }
 
             dev->rules[i].applicationCallback(dev->rpcCommandArguments);
-            memset(dev->rpcCommandArguments,0,
-                   sizeof(dev->rpcCommandArguments));
+            message->responseCode = HTTPSERVER_RESPONSECODE_OK;
+
             return HTTPRPC_ERROR_OK;
         }
 
