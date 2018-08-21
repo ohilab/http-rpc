@@ -1,10 +1,10 @@
-/*******************************************************************************
+/*
  * A simple HTTP/RPC library
  * Copyright (C) 2018 A. C. Open Hardware Ideas Lab
  *
  * Authors:
- *  Gianluca Calignano <g.calignano97@gmail.com>
- *  Marco Giammarini <m.giammarini@warcomeb.it>
+ * Marco Giammarini <m.giammarini@warcomeb.it>
+ * Gianluca Calignano <g.calignano97@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- ******************************************************************************/
+ */
 
 #include "http-rpc.h"
 #include <string.h>
@@ -31,7 +31,7 @@
 HttpServer_Error HttpRpc_performingRequest(void* dev,
                                            HttpServer_MessageHandle message)
 {
-	if(message->request == HTTPSERVER_REQUEST_GET)
+	if (message->request == HTTPSERVER_REQUEST_GET)
 	{
 	    HttpRpc_getHandler(dev, message);
 	}
@@ -46,18 +46,11 @@ HttpRpc_Error HttpRpc_init (HttpRpc_DeviceHandle dev)
 	dev->httpServer.ethernetSocketConfig = dev->config.ethernetSocketConfig;
 	dev->httpServer.socketNumber = dev->config.socketNumber;
 	dev->httpServer.port = dev->config.port;
-	//httpRpc.httpServer = &httpServer;
-
-//	HttpRpc_Rule rules[HTTPRPC_RULES_MAX_NUMBER];
-//
-//	dev->rules = rules;
 
 	dev->httpServer.performingCallback = HttpRpc_performingRequest;
 	dev->httpServer.appDevice = dev;
 
-	HttpServer_open(&(dev->httpServer));
-
-
+	return HttpServer_open(&(dev->httpServer));
 }
 
 HttpRpc_Error HttpRpc_poll (HttpRpc_DeviceHandle dev)
@@ -75,97 +68,89 @@ HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
     uint16_t rpcCommandArgumentsIndex = 0;
     uint16_t argumentLength = 0;
 
-    /**
-     * check if a rule match the rpc command arrived*/
+    // check if a rule match the rpc command arrived
     for (i = 0; i<HTTPRPC_RULES_MAX_NUMBER; i++)
     {
-        /**
-         * dummy check to know if there is a ruleClass*/
+        // dummy check to know if there is a ruleClass
         if (dev->rules[i].ruleClass[0] != '\0')
         {
-            for(j = 0; j < HTTPRPC_MAX_ARGUMENT_NUMBER + 2; j++)
+            for (j = 0; j < HTTPRPC_MAX_ARGUMENT_NUMBER + 2; j++)
             {
                 if (j < 2)
+                {
+                    // check if a ruleClass match the rpc command class arrived
+                    if (j == 0)
                     {
-                     //check if a ruleClass match the rpc command class arrived
-                        if (j == 0)
+                        // first token character MUST be '/'
+                        tokenCharacter[0] = '/';
+                        token = strtok(message->uri,
+                                       tokenCharacter);
+                        if(strcmp (token,
+                                   dev->rules[i].ruleClass) == 0)
                         {
-                            // first token character MUST be '/'
-                            tokenCharacter[0] = '/';
-                            token = strtok(message->uri,
-                                           tokenCharacter);
-                            if(strcmp (token,
-                                       dev->rules[i].ruleClass) == 0)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                //RPC command class not recognize
-                                message->responseCode = HTTPSERVER_RESPONSECODE_BADREQUEST;
-                                return HTTPRPC_ERROR_RPC_COMMAND_NOT_RECOGNIZE;
-                            }
+                            continue;
                         }
-                        /*
-                         *check if a ruleFunction match
-                         *the rpc command function arrived
-                         */
-                        else if (j == 1)
-                        {
-                            // next tokens characters MUST be ' '
-                            tokenCharacter[0] = '%';
-                            tokenCharacter[1] = '2';
-                            tokenCharacter[2] = '0';
-                            token = strtok(NULL, tokenCharacter);
-                            if(strcmp (token, dev->rules[i].ruleFunction) == 0)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                //RPC command function not recognize
-                                message->responseCode = HTTPSERVER_RESPONSECODE_BADREQUEST;
-                                return HTTPRPC_ERROR_RPC_COMMAND_NOT_RECOGNIZE;
-                            }
-                        }
-                    }
-
-                        //Take every parameter and put it in the argument string
-                        token = strtok(NULL, tokenCharacter);
-                        argumentLength = strlen(token);
-                        if((argumentLength + rpcCommandArgumentsIndex) < HTTPRPC_MAX_ARGUMENTS_LENGTH)
-                        {
-                            //Check if the parameters are finished
-                            if(token==NULL) break;
-                            //Put the parameter in the argument string
-                            strncpy(&(dev->rpcCommandArguments[rpcCommandArgumentsIndex]),
-                                    token,
-                                    argumentLength);
-                            rpcCommandArgumentsIndex += argumentLength;
-                            dev->rpcCommandArguments[rpcCommandArgumentsIndex] = ' ';
-                            rpcCommandArgumentsIndex += 1;
-                        }
-
                         else
                         {
-                            //Rpc command is too large
-                            message->responseCode = HTTPSERVER_RESPONSECODE_REQUESTENTITYTOOLARGE;
-                            return HTTPRPC_ERROR_RPC_COMMAND_TOO_LONG;
-
+                            //RPC command class not recognize
+                            message->responseCode = HTTPSERVER_RESPONSECODE_BADREQUEST;
+                            return HTTPRPC_ERROR_RPC_COMMAND_NOT_RECOGNIZE;
                         }
-
                     }
+                    // check if a ruleFunction match the rpc command function arrived
+                    else if (j == 1)
+                    {
+                        // next tokens characters MUST be ' '
+                        tokenCharacter[0] = '%';
+                        tokenCharacter[1] = '2';
+                        tokenCharacter[2] = '0';
+                        token = strtok(NULL, tokenCharacter);
+                        if (strcmp (token, dev->rules[i].ruleFunction) == 0)
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            //RPC command function not recognize
+                            message->responseCode = HTTPSERVER_RESPONSECODE_BADREQUEST;
+                            return HTTPRPC_ERROR_RPC_COMMAND_NOT_RECOGNIZE;
+                        }
+                    }
+                }
 
-            //Performing the callback
+                // Take every parameter and put it in the argument string
+                token = strtok(NULL, tokenCharacter);
+                argumentLength = strlen(token);
+                if ((argumentLength + rpcCommandArgumentsIndex) < HTTPRPC_MAX_ARGUMENTS_LENGTH)
+                {
+                    // Check if the parameters are finished
+                    if (token==NULL) break;
+                    // Put the parameter in the argument string
+                    strncpy(&(dev->rpcCommandArguments[rpcCommandArgumentsIndex]),
+                            token,
+                            argumentLength);
+                    rpcCommandArgumentsIndex += argumentLength;
+                    dev->rpcCommandArguments[rpcCommandArgumentsIndex] = ' ';
+                    rpcCommandArgumentsIndex += 1;
+                }
+
+                else
+                {
+                    // Rpc command is too large
+                    message->responseCode = HTTPSERVER_RESPONSECODE_REQUESTENTITYTOOLARGE;
+                    return HTTPRPC_ERROR_RPC_COMMAND_TOO_LONG;
+
+                }
+
+            }
+
+            // Performing the callback
             dev->rules[i].applicationCallback(dev->rpcCommandArguments);
-            //Everything gone well
+            // Everything gone well
             message->responseCode = HTTPSERVER_RESPONSECODE_OK;
 
             return HTTPRPC_ERROR_OK;
         }
-
-
-
     }
 }
 
