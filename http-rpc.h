@@ -133,17 +133,38 @@ typedef struct _HttpRpc_Device
 
 } HttpRpc_Device, *HttpRpc_DeviceHandle;
 
+/**
+ * @param dev The RPC server pointer which is previously definited
+ */
 HttpRpc_Error HttpRpc_init (HttpRpc_DeviceHandle httpRpc);
 
-HttpRpc_Error HttpRpc_poll (HttpRpc_DeviceHandle httpServer, uint16_t timeout);
+/**
+ * @param dev The RPC server pointer where the polling is do
+ */
+HttpRpc_Error HttpRpc_poll (HttpRpc_DeviceHandle dev);
 
+/**
+ * @param dev The RPC server pointer where the request is arrived
+ */
 HttpServer_Error HttpRpc_performingRequest (void* dev,
                                             HttpServer_MessageHandle message);
-
+/**
+ * @param dev The RPC server pointer there the request is arrived
+ * @param nmessage The message which is arrived
+ */
 HttpRpc_Error HttpRpc_getHandler (HttpRpc_DeviceHandle dev,
                                   HttpServer_MessageHandle message);
 
-
+/**
+ * @param dev The RPC server pointer where a new rule is going to store
+ * @param ruleNumber The rule number in the array of rules
+ * @param[in] class The char pointer which is going to use to check if the
+ * class rule is matched
+ * @param[in] function The char pointer which is going to use to check if the
+ * function is matched
+ * @param ruleCallback The callback which is going to call if the rule is arrived
+ * in a request
+ */
 HttpRpc_Error HttpRpc_addRule(HttpRpc_DeviceHandle dev,
                               uint8_t ruleNumber,
                               char* class,

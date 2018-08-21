@@ -60,9 +60,9 @@ HttpRpc_Error HttpRpc_init (HttpRpc_DeviceHandle dev)
 
 }
 
-HttpRpc_Error HttpRpc_poll (HttpRpc_DeviceHandle dev, uint16_t timeout)
+HttpRpc_Error HttpRpc_poll (HttpRpc_DeviceHandle dev)
 {
-	HttpServer_poll(&(dev->httpServer), timeout);
+	HttpServer_poll(&(dev->httpServer));
 }
 
 HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
@@ -101,6 +101,7 @@ HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
                             }
                             else
                             {
+                                //RPC command class not recognize
                                 message->responseCode = HTTPSERVER_RESPONSECODE_BADREQUEST;
                                 return HTTPRPC_ERROR_RPC_COMMAND_NOT_RECOGNIZE;
                             }
@@ -122,17 +123,21 @@ HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
                             }
                             else
                             {
+                                //RPC command function not recognize
                                 message->responseCode = HTTPSERVER_RESPONSECODE_BADREQUEST;
                                 return HTTPRPC_ERROR_RPC_COMMAND_NOT_RECOGNIZE;
                             }
                         }
                     }
 
+                        //Take every parameter and put it in the argument string
                         token = strtok(NULL, tokenCharacter);
                         argumentLength = strlen(token);
                         if((argumentLength + rpcCommandArgumentsIndex) < HTTPRPC_MAX_ARGUMENTS_LENGTH)
                         {
+                            //Check if the parameters are finished
                             if(token==NULL) break;
+                            //Put the parameter in the argument string
                             strncpy(&(dev->rpcCommandArguments[rpcCommandArgumentsIndex]),
                                     token,
                                     argumentLength);
@@ -143,6 +148,7 @@ HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
 
                         else
                         {
+                            //Rpc command is too large
                             message->responseCode = HTTPSERVER_RESPONSECODE_REQUESTENTITYTOOLARGE;
                             return HTTPRPC_ERROR_RPC_COMMAND_TOO_LONG;
 
@@ -150,7 +156,9 @@ HttpRpc_Error HttpRpc_getHandler(HttpRpc_DeviceHandle dev,
 
                     }
 
+            //Performing the callback
             dev->rules[i].applicationCallback(dev->rpcCommandArguments);
+            //Everything gone well
             message->responseCode = HTTPSERVER_RESPONSECODE_OK;
 
             return HTTPRPC_ERROR_OK;
